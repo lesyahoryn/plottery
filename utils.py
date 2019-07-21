@@ -588,6 +588,7 @@ def smart_legend(legend, bgs, data=None, ymin=0., ymax=None, Nx=25, Ny=25, niter
 
         if opts["yaxis_log"]:
             ymin = max(ymin,0.1)
+            yval = max(yval, 0.0001)
             yfrac = 1.*(math.log(min(yval,ymax))-math.log(ymin))/(math.log(ymax)-math.log(ymin))
 
         # convert from 0..1 inside plotting pane, to pad coordinates (stupid margins)
