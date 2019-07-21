@@ -150,6 +150,7 @@ class Options(object):
             "show_bkg_smooth": { "type": "Boolean", "desc": "show smoothed background stack", "default": False, "kinds": ["1dratio"], },
             "bkg_sort_method": { "type": "Boolean", "desc": "how to sort background stack using integrals: 'unsorted', 'ascending', or 'descending'", "default": 'ascending', "kinds": ["1dratio"], },
             "no_ratio": { "type": "Boolean", "desc": "do not draw ratio plot", "default": False, "kinds": ["1dratio"], },
+            "no_overflow": { "type": "Boolean", "desc": "do not draw overflow bins", "default": False, "kinds": ["1dratio"], },
 
             "max_digits": { "type": "Int", "desc": "integer for max digits", "default": 5, "kinds" : ["1dratio", "graph", "2d"], },
 
@@ -437,7 +438,8 @@ def plot_hist(data=None,bgs=[],legend_labels=[],colors=[],sigs=[],sig_labels=[],
     legend = get_legend(opts)
 
     if has_data:
-        utils.move_in_overflows(data)
+        if not opts["no_overflow"]:
+            utils.move_in_overflows(data)
         data.SetMarkerStyle(20)
         data.SetMarkerColor(r.kBlack)
         data.SetLineWidth(2)
@@ -538,7 +540,8 @@ def plot_hist(data=None,bgs=[],legend_labels=[],colors=[],sigs=[],sig_labels=[],
         data.Draw("samepe"+extradrawopt)
 
     if sigs:
-        map(utils.move_in_overflows, sigs)
+        if not opts["no_overflow"]:
+            map(utils.move_in_overflows, sigs)
         colors = cycle([r.kRed, r.kBlue, r.kOrange-4, r.kTeal-5])
         if len(sig_labels) < len(sigs):
             sig_labels = [sig.GetTitle() for sig in sigs]
