@@ -151,6 +151,7 @@ class Options(object):
             "bkg_sort_method": { "type": "Boolean", "desc": "how to sort background stack using integrals: 'unsorted', 'ascending', or 'descending'", "default": 'ascending', "kinds": ["1dratio"], },
             "no_ratio": { "type": "Boolean", "desc": "do not draw ratio plot", "default": False, "kinds": ["1dratio"], },
             "no_overflow": { "type": "Boolean", "desc": "do not draw overflow bins", "default": False, "kinds": ["1dratio"], },
+            "stack_signal": { "type": "Boolean", "desc": "stack signal histograms", "default": True, "kinds": ["1dratio"], },
 
             "max_digits": { "type": "Int", "desc": "integer for max digits", "default": 5, "kinds" : ["1dratio", "graph", "2d"], },
 
@@ -472,6 +473,37 @@ def plot_hist(data=None,bgs=[],legend_labels=[],colors=[],sigs=[],sig_labels=[],
                 entry_style = "LPE"
             legend.AddEntry(bg, legend_labels[ibg], entry_style)
         stack.Add(bg)
+
+    if opts["stack_signal"]:
+        for isig_raw,sig in enumerate(sigs):
+            isig = isig_raw + len(bgs) - 1
+            print isig, isig_raw
+            if isig < len(colors):
+                # sig.SetLineColor(r.TColor.GetColorDark(colors[isig]))
+                sig.SetLineColor(colors[isig])
+                # if opts["hist_line_black"]:
+                #     sig.SetLineColor(r.kBlack)
+                # sig.SetLineWidth(1)
+                sig.SetLineWidth(0)
+                sig.SetMarkerColor(colors[isig])
+                sig.SetMarkerSize(0)
+                sig.SetFillColorAlpha(colors[isig],1 if opts["do_stack"] else 0.4)
+                if opts["draw_points"]:
+                    sig.SetLineWidth(3)
+                    #sig.SetMarkerStyle(20)
+                    sig.SetMarkerStyle(marker_shapes[isig % len(marker_shapes)])
+                    sig.SetLineColor(colors[isig])
+                    sig.SetMarkerColor(colors[isig])
+                    sig.SetMarkerSize(0.8)
+                if opts["hist_line_none"]:
+                    sig.SetLineWidth(0)
+            if isig < len(legend_labels):
+                entry_style = "F"
+                if opts["draw_points"]:
+                    entry_style = "LPE"
+                legend.AddEntry(sig, legend_labels[isig], entry_style)
+            stack.Add(sig)
+        sigs = []
 
     stack.SetTitle(opts["title"])
 
