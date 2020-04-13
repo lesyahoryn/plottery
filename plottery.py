@@ -151,7 +151,7 @@ class Options(object):
             "bkg_sort_method": { "type": "Boolean", "desc": "how to sort background stack using integrals: 'unsorted', 'ascending', or 'descending'", "default": 'ascending', "kinds": ["1dratio"], },
             "no_ratio": { "type": "Boolean", "desc": "do not draw ratio plot", "default": False, "kinds": ["1dratio"], },
             "no_overflow": { "type": "Boolean", "desc": "do not draw overflow bins", "default": False, "kinds": ["1dratio"], },
-            "stack_signal": { "type": "Boolean", "desc": "stack signal histograms", "default": True, "kinds": ["1dratio"], },
+            "stack_signal": { "type": "Boolean", "desc": "stack signal histograms", "default": False, "kinds": ["1dratio"], },
 
             "max_digits": { "type": "Int", "desc": "integer for max digits", "default": 5, "kinds" : ["1dratio", "graph", "2d"], },
 
