@@ -740,6 +740,7 @@ def do_style_ratio(ratio, opts, tpad):
     if opts["ratio_name_offset"]: ratio.GetYaxis().SetTitleOffset(opts["ratio_name_offset"])
     if opts["ratio_name_size"]: ratio.GetYaxis().SetTitleSize(opts["ratio_name_size"])
     ratio.GetYaxis().SetNdivisions(opts["ratio_ndivisions"])
+    ratio.GetXaxis().SetNdivisions(opts["xaxis_ndivisions"])
     ratio.GetYaxis().SetLabelSize(0.13)
     if opts["ratio_yaxis_label_offset"]: ratio.GetYaxis().SetLabelOffset(opts["ratio_yaxis_label_offset"])
 
