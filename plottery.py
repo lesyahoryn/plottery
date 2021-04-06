@@ -747,7 +747,10 @@ def do_style_ratio(ratio, opts, tpad):
     if opts["xaxis_range"]: ratio.GetXaxis().SetRangeUser(*opts["xaxis_range"])
     ratio.GetYaxis().SetRangeUser(*opts["ratio_range"])
     ratio.GetXaxis().SetLabelSize(opts["ratio_label_size"])
-    ratio.GetXaxis().SetTitle(opts["ratio_xaxis_title"])
+    if opts["ratio_xaxis_title"] == "":
+        ratio.GetXaxis().SetTitle(opts["xaxis_label"])
+    else:
+        ratio.GetXaxis().SetTitle(opts["ratio_xaxis_title"])
     ratio.GetXaxis().SetNdivisions(opts["xaxis_ndivisions"])
     if opts["ratio_xaxis_title_size"]: ratio.GetXaxis().SetTitleSize(opts["ratio_xaxis_title_size"])
     if opts["ratio_xaxis_title_offset"] :ratio.GetXaxis().SetTitleOffset(opts["ratio_xaxis_title_offset"])
