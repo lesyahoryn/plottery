@@ -574,7 +574,7 @@ def plot_hist(data=None,bgs=[],legend_labels=[],colors=[],sigs=[],sig_labels=[],
     if sigs:
         if not opts["no_overflow"]:
             map(utils.move_in_overflows, sigs)
-        colors = cycle([r.kRed, r.kBlue, 6003, 6001])
+        colors = cycle([r.kRed, r.kBlue, 6001, 6005])
         if len(sig_labels) < len(sigs):
             sig_labels = [sig.GetTitle() for sig in sigs]
         for hsig,signame,color in zip(sigs, sig_labels,colors):
