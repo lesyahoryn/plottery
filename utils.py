@@ -279,6 +279,14 @@ def get_stack_maximum(data, stack, opts={}):
     else:
         return scalefact*stack.GetMaximum()
 
+def get_maximum(hists, opts):
+    scalefact = 1.05
+    ymax = max([h.GetMaximum() for h in hists])
+    print "max is " , ymax
+    return ymax*scalefact
+
+
+
 def compute_darkness(r,g,b):
     """
     Compute darkness := 1 - luminance, given RGB

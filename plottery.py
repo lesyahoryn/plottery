@@ -10,6 +10,8 @@ r.gROOT.SetBatch(1) # please don't open an Xwindow
 r.gEnv.SetValue("RooFit.Banner", "0") # turn off annoying RooFit banner
 r.gErrorIgnoreLevel = r.kError # ignore Info/Warnings
 
+sig_colors = [r.kRed, r.kBlue, 6001, 6003, r.kRed, r.kBlue, 6001, 6003, r.kRed, r.kBlue, 6001, 6003, r.kRed, r.kBlue, 6001, 6003, r.kRed, r.kBlue, 6001, 6003, ]
+
 class Options(object):
     """
     The Options object is just a nice wrapper around a dictionary
@@ -130,6 +132,8 @@ class Options(object):
             "ratio_xaxis_label_offset": { "type": "Float", "desc": "offset to the x-axis labels (numbers)", "default": None, "kinds": ["1dratio"], },
             "ratio_yaxis_label_offset": { "type": "Float", "desc": "offset to the y-axis labels (numbers)", "default": None, "kinds": ["1dratio"], },
             "ratio_tick_length_scale": { "type": "Float", "desc": "Tick length scale of ratio pads", "default": 1.0, "kinds": ["1dratio"], },
+            
+            "ratio_signal": {"type": "Boolean", "desc": "draw s/sqrt(b) ratio", "default": False, "kinds": ["1dratio",]},
 
             # Overall
             "title": { "type": "String", "desc": "plot title", "default": "", "kinds": ["1dratio","graph","2d"], },
@@ -251,6 +255,24 @@ class Options(object):
         else:
             new_opts.update(other.options)
         return Options(new_opts,kind=self.kind)
+
+# S / sqrt(B) fom
+def fom_SoverSqrtB(s,b):
+    if b > 0 and s > 0:
+        # return s / math.sqrt(b), 0
+        try:
+           return math.sqrt(2 * ((s + b) * math.log(1 + s / b) - s))
+        except:
+            print "failed with ", s, b
+            return 0
+    else:
+        return 0
+
+def fom_SoverB(s, b):
+    if b > 0:
+        return s*1.0 / b
+    else:
+        return 0
 
 
 def plot_graph(valpairs,colors=[],legend_labels=[],draw_styles=[],options={}):
@@ -377,7 +399,7 @@ def plot_hist(data=None,bgs=[],legend_labels=[],colors=[],sigs=[],sig_labels=[],
     _persist.append(c1) # need this to avoid segfault with garbage collection
 
     has_data = data and data.InheritsFrom(r.TH1.Class())
-    do_ratio = (has_data or opts["ratio_numden_indices"]) and not opts["no_ratio"]
+    do_ratio = (has_data or opts["ratio_numden_indices"] or opts["ratio_signal"]) and not opts["no_ratio"]
     if do_ratio:
         pad_main = r.TPad("pad1","pad1",0.0,opts["canvas_main_y1"],1.0,1.0)
         if opts["canvas_main_topmargin"]: pad_main.SetTopMargin(opts["canvas_main_topmargin"])
@@ -574,7 +596,7 @@ def plot_hist(data=None,bgs=[],legend_labels=[],colors=[],sigs=[],sig_labels=[],
     if sigs:
         if not opts["no_overflow"]:
             map(utils.move_in_overflows, sigs)
-        colors = cycle([r.kRed, r.kBlue, 6001, 6003])
+        colors = cycle(sig_colors)
         if len(sig_labels) < len(sigs):
             sig_labels = [sig.GetTitle() for sig in sigs]
         for hsig,signame,color in zip(sigs, sig_labels,colors):
@@ -610,7 +632,8 @@ def plot_hist(data=None,bgs=[],legend_labels=[],colors=[],sigs=[],sig_labels=[],
 
     if do_ratio:
         pad_ratio.cd()
-
+        
+    if not opts["ratio_signal"] and do_ratio:
         if opts["ratio_numden_indices"]:
             orig_num_idx, orig_den_idx = opts["ratio_numden_indices"]
             numer = bgs[original_index_mapping[orig_num_idx]].Clone("numer")
@@ -712,7 +735,34 @@ def plot_hist(data=None,bgs=[],legend_labels=[],colors=[],sigs=[],sig_labels=[],
                 mean, sigma, vals = utils.get_mean_sigma_1d_yvals(ratio)
                 to_show = "Pulls: #mu = {:.2f}, #sigma = {:.2f}".format(mean,sigma)
             t.DrawLatexNDC(0.5,yloc+0.01,to_show)
-            oldpad.cd()
+            oldpad.cd() 
+        
+    elif opts["ratio_signal"]:
+        denom = bgs[0].Clone("sumbgs")
+        denom.Reset()
+        denom = sum(bgs,denom)
+        rats = []
+        for sig in sigs:
+            rat = sig.Clone(sig.GetName() + "_ratio")
+            rat.Reset()
+            for ibin in xrange(1, rat.GetNbinsX()+1):
+                rat.SetBinContent(ibin, fom_SoverSqrtB(sig.GetBinContent(ibin), denom.GetBinContent(ibin) ) )
+                #rat.SetBinContent(ibin, fom_SoverB(sig.GetBinContent(ibin), denom.GetBinContent(ibin) ) )
+            rats.append(rat)
+        do_style_ratio_signal(rats, opts, pad_ratio)
+        
+        first = True
+        rats[0].Draw("hist")
+        for rat in xrange(len(rats)):
+            if rat == 0: continue
+            rats[rat].Draw("hist same")
+        
+        l = r.TLine(rats[0].GetXaxis().GetXmin(),1.0,rats[0].GetXaxis().GetXmax(),1.0)
+        l.SetLineColor(r.kBlack)
+        l.SetLineWidth(2)
+        l.Draw("same")
+        pad_ratio.Modified()
+        pad_ratio.Update()
 
         pad_main.cd()
 
@@ -722,14 +772,14 @@ def plot_hist(data=None,bgs=[],legend_labels=[],colors=[],sigs=[],sig_labels=[],
 
 
 def do_style_ratio(ratio, opts, tpad):
-    if opts["ratio_range"][1] <= opts["ratio_range"][0]:
-        # if high <= low, compute range automatically (+-3 sigma interval)
-        mean, sigma, vals = utils.get_mean_sigma_1d_yvals(ratio)
-        low = max(mean-3*sigma,min(vals))-sigma/1e3
-        high = min(mean+3*sigma,max(vals))+sigma/1e3
-        opts["ratio_range"] = [low,high]
+    #if opts["ratio_range"][1] <= opts["ratio_range"][0]:
+    #    # if high <= low, compute range automatically (+-3 sigma interval)
+    #    mean, sigma, vals = utils.get_mean_sigma_1d_yvals(ratio)
+    #    low = max(mean-3*sigma,min(vals))-sigma/1e3
+    #    high = min(mean+3*sigma,max(vals))+sigma/1e3
+    #    opts["ratio_range"] = [low,high]
     ratio.SetMarkerStyle(20)
-    ratio.SetMarkerSize(0.8)
+    ratio.SetMarkerSize(0.5)
     ratio.SetLineWidth(2)
     ratio.SetTitle("")
     if opts["xaxis_log"]:
@@ -758,6 +808,42 @@ def do_style_ratio(ratio, opts, tpad):
     ratio.GetXaxis().SetTickSize(0.06 * opts["ratio_tick_length_scale"])
     ratio.GetYaxis().SetTickSize(0.03 * opts["ratio_tick_length_scale"])
 
+def do_style_ratio_signal(ratios, opts, tpad):
+    opts["ratio_range"] = [0,utils.get_maximum(ratios, opts)]
+    for rat in xrange(len(ratios)):
+        ratios[rat].SetMarkerStyle(20)
+        ratios[rat].SetMarkerSize(0.5)
+        ratios[rat].SetLineWidth(2)
+        ratios[rat].SetLineColor(sig_colors[rat])
+        ratios[rat].SetMarkerColor(sig_colors[rat])
+        ratios[rat].SetTitle("")
+    if opts["xaxis_log"]:
+        tpad.SetLogx(1)
+        ratios[0].GetXaxis().SetMoreLogLabels(opts["xaxis_moreloglabels"])
+        ratios[0].GetXaxis().SetNoExponent(opts["xaxis_noexponents"])
+    ratios[0].GetYaxis().SetTitle("significance")
+    #ratios[0].GetYaxis().SetTitle("ratio")
+    if opts["ratio_name_offset"]: ratios[0].GetYaxis().SetTitleOffset(opts["ratio_name_offset"])
+    if opts["ratio_name_size"]: ratios[0].GetYaxis().SetTitleSize(opts["ratio_name_size"])
+    ratios[0].GetYaxis().SetNdivisions(opts["ratio_ndivisions"])
+    ratios[0].GetXaxis().SetNdivisions(opts["xaxis_ndivisions"])
+    ratios[0].GetYaxis().SetLabelSize(0.13)
+    if opts["ratio_yaxis_label_offset"]: ratios[0].GetYaxis().SetLabelOffset(opts["ratio_yaxis_label_offset"])
+
+    if opts["xaxis_range"]: ratios[0].GetXaxis().SetRangeUser(*opts["xaxis_range"])
+    ratios[0].GetYaxis().SetRangeUser(*opts["ratio_range"])
+    ratios[0].GetXaxis().SetLabelSize(opts["ratio_label_size"])
+    if opts["ratio_xaxis_title"] == "":
+        ratios[0].GetXaxis().SetTitle(opts["xaxis_label"])
+    else:
+        ratios[0].GetXaxis().SetTitle(opts["ratio_xaxis_title"])
+    ratios[0].GetXaxis().SetNdivisions(opts["xaxis_ndivisions"])
+    if opts["ratio_xaxis_title_size"]: ratios[0].GetXaxis().SetTitleSize(opts["ratio_xaxis_title_size"])
+    if opts["ratio_xaxis_title_offset"] :ratios[0].GetXaxis().SetTitleOffset(opts["ratio_xaxis_title_offset"])
+    if opts["ratio_xaxis_label_offset"]: ratios[0].GetXaxis().SetLabelOffset(opts["ratio_xaxis_label_offset"])
+    ratios[0].GetXaxis().SetTickSize(0.03 * opts["ratio_tick_length_scale"])
+    ratios[0].GetYaxis().SetTickSize(0.03 * opts["ratio_tick_length_scale"])
+    
 def draw_percentageinbox(legend, bgs, sigs, opts, has_data=False):
     t = r.TLatex()
     t.SetTextAlign(22)
